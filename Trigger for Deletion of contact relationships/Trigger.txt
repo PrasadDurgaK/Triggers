@@ -1,0 +1,7 @@
+trigger pAccountContactsToChild on Account (before delete) {
+    
+    if(trigger.isBefore){
+        ContactDeletionHelper.ContactToAccountTrig(Trigger.old);
+    }
+    
+}

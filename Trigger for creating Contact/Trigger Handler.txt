@@ -1,0 +1,71 @@
+public class ContactDeletionHelper {
+    
+    public static void ContactToAccountTrig(List<Account> AccList){
+        
+        List<Contact> conInsrtLst = new List<Contact>();
+        Set<Id> accountIdSet = new Set<Id>();
+        Set<Id> AcccontIdSet = new Set<Id>();
+        Set<Id> ContactIdSet = new Set<Id>();
+        Set<ID> AllParents = new Set<ID>();
+        Boolean allDone;
+        
+        //Current Account Id
+        for(Account acc : AccList){
+            
+            If(acc.ParentId != null){
+                
+                accountIdSet.add(acc.Id);
+                AllParents.add(acc.Id);
+            }    
+        }
+        
+        do{
+            //Set the flag to indicate loop should stop
+            allDone = true;
+            //Get a list of accounts with IDs or Parent IDs in the AllParents Set
+            //This will produce 1 SOQL for each level in the Hierachy 
+            //Max is then 99 levels deep which I believe no one will  have
+            //You could add a check though
+            for(Account a : [Select ID, ParentID From Account Where ID IN :AllParents OR ParentID IN :AllParents]){
+                
+                if(!AllParents.contains(a.ID) || ( !AllParents.contains(a.parentID) && a.parentID != null)){
+                    
+                    if(a.parentID != null)
+                        AllParents.add(a.parentID);
+                    
+                    AllParents.add(a.id); //Comment this out if you just want to go up through the parents of the starting account and not get the parents children
+                    //Reset flag to find more parents / children
+                    allDone = false;
+                    
+                }
+                
+            }
+            
+        } while(allDone == false);
+        
+        
+        System.debug('accountIdSet1='+accountIdSet);
+        
+        //Fetch AccountId and ContactId  Details which meet the criteria
+        List<AccountContactRelation> thecontact = [SELECT Id, AccountId, ContactId, IsDeleted, IsActive, IsDirect FROM 
+                                                   AccountContactRelation where AccountId in:Trigger.oldMap.keySet() and IsDirect = true];
+        if(!thecontact.isEmpty()){
+            
+            AccountContactRelation AccCon =  thecontact.get(0);
+            AcccontIdSet.add(AccCon.ContactId);
+            ContactIdSet.add(AccCon.Id);
+            System.debug('contactIdSet = '+AcccontIdSet);
+        }
+        
+        //Fetch the Relation Id's and it to the List
+        If(AllParents.containsAll(accountIdSet)){
+            
+            List<AccountContactRelation> ListtoDel = new List<AccountContactRelation>
+                ([SELECT Id FROM 
+                  AccountContactRelation where ContactId in:AcccontIdSet and Id not in:ContactIdSet]);
+            System.debug('ListtoDel='+ListtoDel);
+            delete ListtoDel;
+        }
+    }
+    
+}

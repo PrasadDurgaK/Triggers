@@ -1,0 +1,6 @@
+trigger ContactToAccount on Contact (after insert) {
+    if(trigger.IsAfter){
+        ContactToAccountHelper.ContactToAccountTrig(Trigger.new);  
+    }
+ 
+}
